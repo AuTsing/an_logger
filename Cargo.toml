@@ -2,6 +2,7 @@
 name = "an_logger"
 version = "0.1.0"
 edition = "2021"
+authors = ["AuTsing <763025696@qq.com>"]
 
 [dependencies]
 log = "0.4.17"
