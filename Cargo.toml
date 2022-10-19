@@ -3,6 +3,11 @@ name = "an_logger"
 version = "0.1.0"
 edition = "2021"
 authors = ["AuTsing <763025696@qq.com>"]
+license = "MIT"
+description = "Android log initializer"
+homepage = "https://github.com/AuTsing/an_logger"
+repository = "https://github.com/AuTsing/an_logger"
+readme = "README.md"
 
 [dependencies]
 log = "0.4.17"
