@@ -30,13 +30,13 @@ fn android_log(level: Level, tag: &CStr, msg: &CStr) {
 #[cfg(not(target_os = "android"))]
 fn android_log(_level: Level, _tag: &CStr, _msg: &CStr) {}
 
-unsafe fn redirect_to_log_write(tag: &'static str) {
+unsafe fn redirect_to_log_write(tag: &'static [u8]) {
     let mut logpipe: [RawFd; 2] = Default::default();
     libc::pipe(logpipe.as_mut_ptr());
     libc::dup2(logpipe[1], libc::STDOUT_FILENO);
     libc::dup2(logpipe[1], libc::STDERR_FILENO);
     thread::spawn(move || {
-        let tag = CStr::from_bytes_with_nul(tag.as_bytes()).unwrap();
+        let tag = CStr::from_bytes_with_nul(tag).unwrap();
         let file = File::from_raw_fd(logpipe[0]);
         let mut reader = BufReader::new(file);
         let mut buffer = String::new();
@@ -53,7 +53,7 @@ unsafe fn redirect_to_log_write(tag: &'static str) {
     });
 }
 
-unsafe fn redirect_to_log_app(_tag: &'static str, env: &JNIEnv) {
+unsafe fn redirect_to_log_app(_tag: &'static [u8], env: &JNIEnv) {
     let java_vm: JavaVM;
     let io_object_global_ref: GlobalRef;
     {
@@ -95,7 +95,7 @@ unsafe fn redirect_to_log_app(_tag: &'static str, env: &JNIEnv) {
     });
 }
 
-unsafe fn redirect_to_log_write_log_app(tag: &'static str, env: &JNIEnv) {
+unsafe fn redirect_to_log_write_log_app(tag: &'static [u8], env: &JNIEnv) {
     let java_vm: JavaVM;
     let io_object_global_ref: GlobalRef;
     {
@@ -117,7 +117,7 @@ unsafe fn redirect_to_log_write_log_app(tag: &'static str, env: &JNIEnv) {
         let env = java_vm.attach_current_thread().unwrap();
         let io_object = io_object_global_ref.as_obj();
 
-        let tag = CStr::from_bytes_with_nul(tag.as_bytes()).unwrap();
+        let tag = CStr::from_bytes_with_nul(tag).unwrap();
         let file = File::from_raw_fd(logpipe[0]);
         let mut reader = BufReader::new(file);
         let mut buffer = String::new();
@@ -140,17 +140,17 @@ unsafe fn redirect_to_log_write_log_app(tag: &'static str, env: &JNIEnv) {
     });
 }
 
-pub fn init_logger_for_log_write(tag: &'static str) {
+pub fn init_logger_for_log_write(tag: &'static [u8]) {
     android_logger::init_once(Config::default().with_min_level(Level::Trace));
     unsafe { redirect_to_log_write(tag) };
 }
 
-pub fn init_logger_for_log_app(tag: &'static str, env: &JNIEnv) {
+pub fn init_logger_for_log_app(tag: &'static [u8], env: &JNIEnv) {
     android_logger::init_once(Config::default().with_min_level(Level::Trace));
     unsafe { redirect_to_log_app(tag, env) };
 }
 
-pub fn init_logger_for_log_write_log_app(tag: &'static str, env: &JNIEnv) {
+pub fn init_logger_for_log_write_log_app(tag: &'static [u8], env: &JNIEnv) {
     android_logger::init_once(Config::default().with_min_level(Level::Trace));
     unsafe { redirect_to_log_write_log_app(tag, env) };
 }
