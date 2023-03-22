@@ -53,7 +53,7 @@ unsafe fn redirect_to_log_write(tag: &'static [u8]) {
     });
 }
 
-unsafe fn redirect_to_log_app(_tag: &'static [u8], env: &JNIEnv) {
+unsafe fn redirect_to_log_app(_tag: &'static [u8], env: &mut JNIEnv) {
     let java_vm: JavaVM;
     let io_object_global_ref: GlobalRef;
     {
@@ -72,7 +72,7 @@ unsafe fn redirect_to_log_app(_tag: &'static [u8], env: &JNIEnv) {
     libc::dup2(logpipe[1], libc::STDOUT_FILENO);
     libc::dup2(logpipe[1], libc::STDERR_FILENO);
     thread::spawn(move || {
-        let env = java_vm.attach_current_thread().unwrap();
+        let env = &mut java_vm.attach_current_thread().unwrap();
         let io_object = io_object_global_ref.as_obj();
 
         let file = File::from_raw_fd(logpipe[0]);
@@ -86,16 +86,21 @@ unsafe fn redirect_to_log_app(_tag: &'static [u8], env: &JNIEnv) {
                 } else {
                     let msg = buffer.clone();
                     let msg_trimed = msg.trim_end();
-                    let msg_value: JValue = env.new_string(msg_trimed).unwrap().into();
-                    env.call_method(io_object, "logInfo", "(Ljava/lang/String;)V", &[msg_value])
-                        .unwrap();
+                    let msg_jstring = env.new_string(msg_trimed).unwrap();
+                    env.call_method(
+                        io_object,
+                        "logInfo",
+                        "(Ljava/lang/String;)V",
+                        &[JValue::from(&msg_jstring)],
+                    )
+                    .unwrap();
                 }
             }
         }
     });
 }
 
-unsafe fn redirect_to_log_write_log_app(tag: &'static [u8], env: &JNIEnv) {
+unsafe fn redirect_to_log_write_log_app(tag: &'static [u8], env: &mut JNIEnv) {
     let java_vm: JavaVM;
     let io_object_global_ref: GlobalRef;
     {
@@ -114,7 +119,7 @@ unsafe fn redirect_to_log_write_log_app(tag: &'static [u8], env: &JNIEnv) {
     libc::dup2(logpipe[1], libc::STDOUT_FILENO);
     libc::dup2(logpipe[1], libc::STDERR_FILENO);
     thread::spawn(move || {
-        let env = java_vm.attach_current_thread().unwrap();
+        let env = &mut java_vm.attach_current_thread().unwrap();
         let io_object = io_object_global_ref.as_obj();
 
         let tag = CStr::from_bytes_with_nul(tag).unwrap();
@@ -131,9 +136,14 @@ unsafe fn redirect_to_log_write_log_app(tag: &'static [u8], env: &JNIEnv) {
 
                     let msg = buffer.clone();
                     let msg_trimed = msg.trim_end();
-                    let msg_value: JValue = env.new_string(msg_trimed).unwrap().into();
-                    env.call_method(io_object, "logInfo", "(Ljava/lang/String;)V", &[msg_value])
-                        .unwrap();
+                    let msg_jstring = env.new_string(msg_trimed).unwrap();
+                    env.call_method(
+                        io_object,
+                        "logInfo",
+                        "(Ljava/lang/String;)V",
+                        &[JValue::from(&msg_jstring)],
+                    )
+                    .unwrap();
                 }
             }
         }
@@ -145,12 +155,12 @@ pub fn init_logger_for_log_write(tag: &'static [u8]) {
     unsafe { redirect_to_log_write(tag) };
 }
 
-pub fn init_logger_for_log_app(tag: &'static [u8], env: &JNIEnv) {
+pub fn init_logger_for_log_app(tag: &'static [u8], env: &mut JNIEnv) {
     android_logger::init_once(Config::default().with_min_level(Level::Trace));
     unsafe { redirect_to_log_app(tag, env) };
 }
 
-pub fn init_logger_for_log_write_log_app(tag: &'static [u8], env: &JNIEnv) {
+pub fn init_logger_for_log_write_log_app(tag: &'static [u8], env: &mut JNIEnv) {
     android_logger::init_once(Config::default().with_min_level(Level::Trace));
     unsafe { redirect_to_log_write_log_app(tag, env) };
 }

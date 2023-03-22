@@ -1,1 +1,1 @@
-Android log initializer
+Denort log initializer
